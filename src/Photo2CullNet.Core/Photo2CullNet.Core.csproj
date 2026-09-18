@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Standard-format image decode/resize/pixel access. MIT licensed
+         (unlike SixLabors.ImageSharp 3+, which moved to a split
+         commercial/OSS license) and genuinely cross-platform. -->
+    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
+
+    <!-- RAW decode. Windows x64 + Ubuntu 22.04 x64 only for now, see
+         Raw/RawPhoto.cs for the platform-gap tracking; no macOS native
+         package exists yet upstream. -->
+    <PackageReference Include="Sdcb.LibRaw" Version="0.21.1.7" />
+    <PackageReference Include="Sdcb.LibRaw.runtime.win64" Version="0.21.1" />
+    <PackageReference Include="Sdcb.LibRaw.runtime.linux64" Version="0.21.1" />
+
+    <!-- Face detection: same bundled ONNX model as the Rust app. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embedded (not just copied), matching the Rust app's include_bytes!:
+         the model ships inside the assembly, not as a loose file next to it. -->
+    <EmbeddedResource Include="Assets\Models\version-RFB-320.onnx" LogicalName="Photo2CullNet.Core.Assets.Models.version-RFB-320.onnx" />
+  </ItemGroup>
+
+</Project>

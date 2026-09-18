@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Photo2CullNet.App/Photo2CullNet.App.csproj" />
+    <Project Path="src/Photo2CullNet.Core/Photo2CullNet.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Photo2CullNet.Core.Tests/Photo2CullNet.Core.Tests.csproj" />
+  </Folder>
+</Solution>
