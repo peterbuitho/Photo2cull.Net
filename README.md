@@ -116,7 +116,18 @@ cannot be disabled"), and one of its `IlcArg`s (`--nometadatablocking`)
 crashes that same newer ILCompiler outright. Whatever's actually broken
 survives applying the rest of that sample's fixes, so this looks like a
 genuine incompatibility between Photino.Blazor 4.0.13's WebView bridge and
-.NET 10's Native AOT, not a missing trimming directive.
+.NET's Native AOT, not a missing trimming directive.
+
+**Also retargeted to net9.0 and re-ran the whole experiment** (Native AOT
+has existed since .NET 7; Blazor Hybrid's AOT support has always been the
+rough-edged kind, unlike Blazor WebAssembly's own separate, unrelated AOT
+story) in case .NET 10's newer ILCompiler was itself the problem, not just
+the two settings it happened to reject. Same `--nometadatablocking`
+rejection under net9.0's ILCompiler too (so that flag is just gone from
+modern ILC generally, nothing to do with .NET 10 specifically) -- dropped
+it and published successfully anyway. Result: identical failure mode,
+window opens, page starts loading, nothing ever renders. So this isn't a
+.NET-10-vs-9 issue; it's Photino.Blazor 4.0.13 itself under Native AOT.
 
 Not pursued further here since self-contained already answers "no install
 step" -- AOT would only additionally shrink the deployment and speed up

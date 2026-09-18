@@ -23,10 +23,13 @@
 
   <!-- Native AOT (`dotnet publish -p:PublishAot=true`) was investigated
        and deliberately left disabled here; see README's "Known gaps"
-       for what was actually tried and how it failed. Turning it back on
+       for what was actually tried and how it failed, including a second
+       attempt retargeting to net9.0 specifically (same result: opens its
+       window, loads the page, never renders). Turning it back on
        requires the win-only ItemGroup this project used to have (an
        .rd.xml pair plus RuntimeIdentifier-conditioned RdXmlFile entries)
-       and currently still doesn't render; don't re-enable it without
-       re-verifying against a real launch, not just a clean publish. -->
+       and currently still doesn't render on either net9.0 or net10.0;
+       don't re-enable it without re-verifying against a real launch, not
+       just a clean publish. -->
 
 </Project>
