@@ -27,6 +27,22 @@ egui layout code.
   per-photo mode override + recompute, duplicate grouping, and a ranking
   pipeline (technical cutoff -> dedupe -> rank -> shortlist) with live
   weight sliders.
+- **`Photo2CullNet.App.Avalonia`**: a second, parallel UI (same Core,
+  same feature set, plain code-behind against Avalonia controls instead
+  of Razor) built specifically because Native AOT is confirmed working
+  under Avalonia (screenshot-verified) and confirmed *not* working under
+  Photino.Blazor 4.0.13 -- see "Release/deployment" below. Functionally
+  verified end-to-end with real UI-automation-driven interaction (typed a
+  folder path, clicked Scan, watched real photos get scored, sorted, and
+  displayed) -- **except one known bug**: some thumbnails render as a
+  flat color block instead of the actual photo. A `Dispatcher.UIThread.Invoke`
+  fix (forcing thumbnail `Bitmap` construction onto the UI thread rather
+  than trusting the calling context) fixed most but not all of them in
+  testing; the remainder wasn't root-caused before running out of time in
+  the session that built this. Whoever picks this up next: reproduce with
+  a real mouse-driven scan (this was found via UI Automation clicks,
+  which may not perfectly mirror real input) and check whether it's
+  timing/race-related in `MainWindow.AddCard`.
 
 ## Known gaps / approximations
 

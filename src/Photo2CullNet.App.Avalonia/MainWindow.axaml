@@ -1,0 +1,183 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:Photo2CullNet.App.Avalonia"
+        x:Class="Photo2CullNet.App.Avalonia.MainWindow"
+        Title="Photo2Cull" Width="1300" Height="850"
+        Background="#1e1e1e">
+
+  <Window.Styles>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#0e5f9e" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="ToggleButton.tab:checked">
+      <Setter Property="Background" Value="#0e5f9e" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </Window.Styles>
+
+  <Panel>
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+
+      <!-- Toolbar -->
+      <Border Grid.Row="0" Background="#262626" BorderBrush="#3a3a3a" BorderThickness="0,0,0,1" Padding="14,10">
+        <WrapPanel>
+          <TextBox Name="RootPathBox" PlaceholderText="Folder to scan…" Width="320" Margin="0,0,8,0" />
+          <Button Name="BrowseButton" Content="Browse…" Click="OnBrowseClick" Margin="0,0,8,0" />
+          <ComboBox Name="ScanModeCombo" SelectedIndex="0" Margin="0,0,8,0">
+            <ComboBoxItem>Auto</ComboBoxItem>
+            <ComboBoxItem>Landscape</ComboBoxItem>
+            <ComboBoxItem>Portrait</ComboBoxItem>
+            <ComboBoxItem>Object</ComboBoxItem>
+          </ComboBox>
+          <Button Name="ScanButton" Content="Scan" Classes="primary" Click="OnScanClick" IsEnabled="False" Margin="0,0,8,0" />
+          <Button Name="GroupButton" Content="Group duplicates" Click="OnGroupClick" IsEnabled="False" Margin="0,0,8,0" />
+          <Button Name="RankButton" Content="Rank now" Click="OnRankClick" IsEnabled="False" Margin="0,0,8,0" />
+          <Button Name="MoveButton" Content="Move 0 disqualified" Click="OnMoveClick" IsEnabled="False" Margin="0,0,8,0" />
+          <TextBlock Name="MoveStatusText" Foreground="#9cc9ff" VerticalAlignment="Center" FontSize="12" />
+        </WrapPanel>
+      </Border>
+
+      <!-- Status line -->
+      <TextBlock Grid.Row="1" Name="StatusText" Margin="14,4" Foreground="#999" FontSize="12"
+                 Text="Enter a folder and click Scan." />
+
+      <!-- Tabs + sort -->
+      <WrapPanel Grid.Row="2" Margin="14,8,14,0">
+        <ToggleButton Name="FlatTab" Classes="tab" Content="All photos" Click="OnFlatTabClick" IsChecked="True" Margin="0,0,4,0" />
+        <ToggleButton Name="GroupedTab" Classes="tab" Content="Duplicate groups (0)" Click="OnGroupedTabClick" Margin="0,0,4,0" />
+        <ToggleButton Name="PipelineTab" Classes="tab" Content="Shortlist" Click="OnPipelineTabClick" Margin="0,0,20,0" />
+        <TextBlock Text="Sort by" VerticalAlignment="Center" Foreground="#aaa" FontSize="12" Margin="0,0,4,0" />
+        <ComboBox Name="SortByCombo" SelectedIndex="0" SelectionChanged="OnSortByChanged">
+          <ComboBoxItem>Sharpness</ComboBoxItem>
+          <ComboBoxItem>Overall</ComboBoxItem>
+        </ComboBox>
+      </WrapPanel>
+
+      <!-- Weights pane -->
+      <Border Grid.Row="3" Background="#232323" BorderBrush="#3a3a3a" BorderThickness="0,0,0,1" Padding="14,10" Margin="0,8,0,0">
+        <WrapPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Sharpness" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="SharpnessSlider" Minimum="0" Maximum="1" Value="0.25" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnSharpnessChanged" />
+              <TextBlock Name="SharpnessValueText" Text="0.25" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Exposure" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="ExposureSlider" Minimum="0" Maximum="1" Value="0.15" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnExposureChanged" />
+              <TextBlock Name="ExposureValueText" Text="0.15" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Contrast" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="ContrastSlider" Minimum="0" Maximum="1" Value="0.10" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnContrastChanged" />
+              <TextBlock Name="ContrastValueText" Text="0.10" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Color" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="ColorSlider" Minimum="0" Maximum="1" Value="0.10" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnColorChanged" />
+              <TextBlock Name="ColorValueText" Text="0.10" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Composition" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="CompositionSlider" Minimum="0" Maximum="1" Value="0.25" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnCompositionChanged" />
+              <TextBlock Name="CompositionValueText" Text="0.25" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Subject" Foreground="#aaa" FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Slider Name="SubjectSlider" Minimum="0" Maximum="1" Value="0.15" Width="120" TickFrequency="0.05" IsSnapToTickEnabled="True" ValueChanged="OnSubjectChanged" />
+              <TextBlock Name="SubjectValueText" Text="0.15" Foreground="#ccc" FontSize="11" Width="34" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Disqualify scores below" Foreground="#aaa" FontSize="11" />
+            <NumericUpDown Name="ThresholdNumeric" Minimum="0" Value="32" Increment="1" Width="110" ValueChanged="OnThresholdChanged" ShowButtonSpinner="False" />
+          </StackPanel>
+          <StackPanel Margin="0,0,16,0" Spacing="2">
+            <TextBlock Text="Duplicate/burst threshold (0-64)" Foreground="#aaa" FontSize="11" />
+            <NumericUpDown Name="GroupThresholdNumeric" Minimum="0" Maximum="64" Value="6" Increment="1" Width="110" ValueChanged="OnGroupThresholdChanged" ShowButtonSpinner="False" />
+          </StackPanel>
+          <StackPanel Spacing="2">
+            <TextBlock Text="Shortlist size" Foreground="#aaa" FontSize="11" />
+            <NumericUpDown Name="ShortlistNumeric" Minimum="1" Maximum="100000" Value="150" Increment="1" Width="110" ValueChanged="OnShortlistSizeChanged" ShowButtonSpinner="False" />
+          </StackPanel>
+        </WrapPanel>
+      </Border>
+
+      <!-- Pipeline summary -->
+      <TextBlock Grid.Row="4" Name="PipelineSummaryText" Margin="14,6" Foreground="#bbb" FontSize="12" IsVisible="False" />
+
+      <!-- Grid -->
+      <ScrollViewer Grid.Row="5">
+        <ItemsControl Name="SectionsControl" Margin="14">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="local:GridSection">
+              <StackPanel>
+                <TextBlock Text="{Binding Heading}" IsVisible="{Binding HasHeading}"
+                           Foreground="#9cc9ff" FontWeight="Bold" Margin="0,6,0,4" />
+                <ItemsControl ItemsSource="{Binding Cards}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="local:PhotoCardViewModel">
+                      <Border Background="#2a2a2a" BorderBrush="#3a3a3a" BorderThickness="1" CornerRadius="6"
+                              Padding="6" Margin="0,0,10,10" Width="250">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Border Width="120" Height="120" Background="#111" CornerRadius="4" ClipToBounds="True">
+                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" Cursor="Hand"
+                                   DoubleTapped="OnThumbnailDoubleTapped" ToolTip.Tip="Double-click for full size" />
+                          </Border>
+                          <StackPanel Width="112" Spacing="4">
+                            <TextBlock Text="{Binding FileName}" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Foreground="White" />
+                            <ComboBox SelectedItem="{Binding ModeText, Mode=OneWay}" SelectionChanged="OnCardModeChanged" FontSize="11" HorizontalAlignment="Stretch">
+                              <x:String>Landscape</x:String>
+                              <x:String>Portrait</x:String>
+                              <x:String>Object</x:String>
+                            </ComboBox>
+                            <Border Background="{Binding BadgeBrush}" CornerRadius="3" Padding="6,2" HorizontalAlignment="Left">
+                              <TextBlock Text="{Binding ScoreText}" Foreground="{Binding BadgeForeground}" FontSize="11" FontWeight="Bold" />
+                            </Border>
+                            <TextBlock Text="{Binding OverallText, StringFormat='Overall: {0}'}" Foreground="#9cc9ff" FontSize="12" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- Full-size preview overlay -->
+    <Border Name="ViewerOverlay" Background="#DD000000" IsVisible="False" PointerPressed="OnViewerOverlayPointerPressed">
+      <Border Background="#222" Padding="12" CornerRadius="6" MaxWidth="1600" MaxHeight="900"
+              HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Name="ViewerTitleText" Grid.Column="0" Foreground="White" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close (Esc)" Click="OnCloseViewerClick" />
+          </Grid>
+          <TextBlock Name="ViewerLoadingText" Text="Loading full size…" Foreground="#ccc" HorizontalAlignment="Center" Margin="0,40" />
+          <Image Name="ViewerImage" Stretch="Uniform" MaxWidth="1560" MaxHeight="800" />
+        </StackPanel>
+      </Border>
+    </Border>
+  </Panel>
+</Window>
