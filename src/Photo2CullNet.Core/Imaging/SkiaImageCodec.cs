@@ -26,36 +26,20 @@ public static class SkiaImageCodec
         }
 
         using var oriented = ApplyOrientation(original, codec.EncodedOrigin);
-        return FitResizeToRgb(oriented, maxDim);
+        var rgb = ToRgbImage(oriented);
+        var (w, h) = FitDimensions(rgb.Width, rgb.Height, maxDim);
+        return ImageOps.ResizeTriangle(rgb, w, h);
     }
 
-    /// <summary>Resize (fit within a box, preserving aspect ratio) and convert to <see cref="RgbImage"/>.</summary>
-    public static RgbImage FitResizeToRgb(SKBitmap bitmap, int maxDim)
-    {
-        var (w, h) = FitDimensions(bitmap.Width, bitmap.Height, maxDim);
-        using var resized = ResizeExact(bitmap, w, h);
-        return ToRgbImage(resized);
-    }
-
+    /// <summary>Resize (fit within a box, preserving aspect ratio).</summary>
     public static RgbImage ResizeToFit(RgbImage img, int maxDim)
     {
         var (w, h) = FitDimensions(img.Width, img.Height, maxDim);
-        if (w == img.Width && h == img.Height)
-        {
-            return img;
-        }
-        using var bmp = ToSkBitmap(img);
-        using var resized = ResizeExact(bmp, w, h);
-        return ToRgbImage(resized);
+        return ImageOps.ResizeTriangle(img, w, h);
     }
 
-    /// <summary>Stretch-resize to an exact size (used for the 9x8 dHash step).</summary>
-    public static RgbImage ResizeExactTo(RgbImage img, int w, int h)
-    {
-        using var bmp = ToSkBitmap(img);
-        using var resized = ResizeExact(bmp, w, h);
-        return ToRgbImage(resized);
-    }
+    /// <summary>Stretch-resize to an exact size (used for the 9x8 dHash step and the face detector's 320x240 input).</summary>
+    public static RgbImage ResizeExactTo(RgbImage img, int w, int h) => ImageOps.ResizeTriangle(img, w, h);
 
     /// <summary>Encode to PNG bytes, for embedding thumbnails in the UI.</summary>
     public static byte[] EncodePng(RgbImage img)
@@ -73,13 +57,6 @@ public static class SkiaImageCodec
         }
         double scale = Math.Min((double)maxDim / w, (double)maxDim / h);
         return (Math.Max(1, (int)Math.Round(w * scale)), Math.Max(1, (int)Math.Round(h * scale)));
-    }
-
-    private static SKBitmap ResizeExact(SKBitmap bitmap, int w, int h)
-    {
-        var info = new SKImageInfo(w, h, SKColorType.Rgb888x, SKAlphaType.Opaque);
-        var resized = bitmap.Resize(info, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
-        return resized ?? throw new InvalidOperationException("resize failed");
     }
 
     private static SKBitmap ApplyOrientation(SKBitmap bitmap, SKEncodedOrigin origin)
