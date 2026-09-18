@@ -67,6 +67,8 @@ button.primary:hover:not(:disabled) { background: #1478c4; }
 
 .status-line { padding: 4px 14px; color: #999; font-size: 12px; }
 
+.move-status { color: #9cc9ff; font-size: 12px; }
+
 .weights-pane {
     display: flex;
     flex-wrap: wrap;
@@ -75,6 +77,9 @@ button.primary:hover:not(:disabled) { background: #1478c4; }
     background: #232323;
     border-bottom: 1px solid #3a3a3a;
 }
+
+.slider-row { display: flex; align-items: center; gap: 6px; }
+.slider-value { font-size: 11px; color: #ccc; min-width: 2.4em; text-align: right; }
 
 .weights-pane label {
     display: flex;
