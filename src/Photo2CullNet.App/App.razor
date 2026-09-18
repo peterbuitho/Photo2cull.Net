@@ -3,6 +3,7 @@
 
 <div class="toolbar">
     <input type="text" placeholder="Folder to scan…" @bind="_rootPath" @bind:event="oninput" disabled="@_scanning" />
+    <button @onclick="BrowseFolder" disabled="@_scanning">Browse…</button>
     <select @bind="_scanModeChoice" disabled="@_scanning">
         <option value="Auto">Auto</option>
         <option value="Landscape">Landscape</option>
@@ -43,11 +44,14 @@
     <label>Color <input type="range" min="0" max="1" step="0.05" value="@_weights.Color" @oninput="e => UpdateWeight(w => w with { Color = ParseFloat(e) })" /></label>
     <label>Composition <input type="range" min="0" max="1" step="0.05" value="@_weights.Composition" @oninput="e => UpdateWeight(w => w with { Composition = ParseFloat(e) })" /></label>
     <label>Subject <input type="range" min="0" max="1" step="0.05" value="@_weights.Subject" @oninput="e => UpdateWeight(w => w with { Subject = ParseFloat(e) })" /></label>
-    <label>Technical cutoff (raw sharpness)
-        <input type="number" min="0" step="5" value="@_technicalThreshold" @oninput="e => _technicalThreshold = double.TryParse(e.Value?.ToString(), out var v) ? v : _technicalThreshold" />
+    <label>Disqualify scores below
+        <input type="number" min="0" step="1" value="@_technicalThreshold" @oninput="e => _technicalThreshold = double.TryParse(e.Value?.ToString(), out var v) ? Math.Max(v, 0) : _technicalThreshold" />
+    </label>
+    <label>Duplicate/burst threshold (0-64, lower = stricter)
+        <input type="number" min="0" max="64" step="1" value="@_groupThreshold" @oninput="e => _groupThreshold = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 0, 64) : _groupThreshold" />
     </label>
     <label>Shortlist size
-        <input type="number" min="1" step="1" value="@_shortlistSize" @oninput="e => _shortlistSize = int.TryParse(e.Value?.ToString(), out var v) ? Math.Max(v, 1) : _shortlistSize" />
+        <input type="number" min="1" max="100000" step="1" value="@_shortlistSize" @oninput="e => _shortlistSize = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 1, 100_000) : _shortlistSize" />
     </label>
 </div>
 
@@ -91,11 +95,17 @@
 
     private ViewMode _viewMode = ViewMode.Flat;
     private List<List<string>> _duplicateGroups = [];
-    private const int DuplicateMaxDistance = 5;
+
+    /// <summary>Max dHash Hamming distance (0-64) for two photos to be considered duplicates/burst-mates.</summary>
+    private int _groupThreshold = 6;
 
     private Weights _weights = Weights.Default;
-    private double _technicalThreshold = 40.0; // matches the Rust app's "blurry" cutoff
-    private int _shortlistSize = 20;
+
+    /// <summary>Score at/below which entries are flagged for the "disqualify" workflow -- matches app.rs's <c>cull_threshold</c> default.</summary>
+    private double _technicalThreshold = 32.0;
+
+    /// <summary>How many photos the pipeline's final shortlist keeps -- matches app.rs's <c>pipeline_top_n</c> default.</summary>
+    private int _shortlistSize = 150;
     private PipelineResultView? _pipelineResult;
 
     private const double SharpnessBlurryMax = 40.0;
@@ -120,6 +130,15 @@
 
     private static float ParseFloat(Microsoft.AspNetCore.Components.ChangeEventArgs e) =>
         float.TryParse(e.Value?.ToString(), out var v) ? v : 0f;
+
+    private async Task BrowseFolder()
+    {
+        var picked = await Native.FolderPicker.PickFolderAsync();
+        if (picked is not null)
+        {
+            _rootPath = picked;
+        }
+    }
 
     private async Task StartScan()
     {
@@ -172,7 +191,7 @@
     private void GroupDuplicates()
     {
         var hashes = _results.Select(r => (r.Path, r.PHash)).ToList();
-        _duplicateGroups = Dedupe.GroupDuplicates(hashes, DuplicateMaxDistance);
+        _duplicateGroups = Dedupe.GroupDuplicates(hashes, _groupThreshold);
         _viewMode = ViewMode.Grouped;
     }
 
@@ -192,7 +211,7 @@
         int afterTechnical = survivorsIdx.Count;
 
         var hashes = survivorsIdx.Select(i => (Path: i.ToString(), Hash: _results[i].PHash)).ToList();
-        var groups = Dedupe.GroupDuplicates(hashes, DuplicateMaxDistance);
+        var groups = Dedupe.GroupDuplicates(hashes, _groupThreshold);
         var grouped = new HashSet<int>(groups.SelectMany(g => g.Select(int.Parse)));
 
         var bestOfGroup = new List<int>();
