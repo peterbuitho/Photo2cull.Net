@@ -36,19 +36,20 @@ egui layout code.
   a native ImageIO/Core Image-based backend for macOS (no LibRaw needed
   there) is the natural follow-up. Standard formats (PNG/JPEG/TIFF/BMP/WebP)
   work everywhere via SkiaSharp.
-- **The Laplacian filter's border handling is a standard clamp-to-edge
-  convolution**, not verified bit-for-bit against `imageproc::filter::laplacian_filter`'s
-  exact edge behavior. Functionally equivalent; absolute values very near
-  a frame's edge may differ slightly.
-- **The UI doesn't have a native folder picker yet** -- the scan folder is
-  a plain text field. Platform-specific pickers (Win32 `IFileDialog`,
-  macOS `NSOpenPanel`, GTK on Linux) are a follow-up, not something Photino
-  ships out of the box.
+- **No native folder picker on macOS/Linux beyond `osascript`/`zenity`/`kdialog`.**
+  `Native/FolderPicker.cs` uses `SHBrowseForFolder` on Windows and shells
+  out to whichever of those is installed elsewhere, falling back to the
+  plain text field if none are found.
 - The exact duplicate-grouping Hamming-distance default and technical-
   sharpness cutoff shown in the UI are reasonable starting values, not
   necessarily the exact constants tuned into the original app's UI (the
   ranking *math* itself -- `Metrics`, `Weights`, `Ranking.OverallScore` --
-  is ported exactly).
+  is ported exactly). The sharpness score itself *is* now verified to
+  match: see `Sharpness`/`ImageOps.ResizeTriangle`'s doc comments for the
+  two bugs (wrong Laplacian kernel, aliasing resize) this took to fix, and
+  the ground-truth numbers they were checked against.
+- **Native AOT doesn't work with this Photino.Blazor version yet** -- see
+  "Release/deployment" below.
 
 ## Why these libraries
 
@@ -71,6 +72,59 @@ dotnet build
 dotnet test                                    # Core.Tests
 dotnet run --project src/Photo2CullNet.App
 ```
+
+## Release/deployment
+
+.NET has three ways to ship this that matter here, in increasing order of
+"how close to the Rust build's single native `.exe` with zero install step":
+
+1. **Framework-dependent** (`dotnet publish`, default) -- smallest output,
+   but needs the .NET runtime already installed on the machine. Not what
+   we want to ship.
+2. **Self-contained** (`dotnet publish -r win-x64 --self-contained`) --
+   bundles the .NET runtime into the output folder. No install step, but
+   it's still JIT-compiled IL running on a bundled CoreCLR, not native
+   machine code, and it's a folder of ~15-20 files rather than one exe.
+   **This is what works today** and is the safe choice to actually ship.
+3. **Native AOT** (`dotnet publish -p:PublishAot=true`) -- true native
+   machine code, no CoreCLR/JIT at all, closest to the Rust build's
+   deployment story. **Investigated, currently broken for this app.**
+   Details below.
+
+### Native AOT: what was actually tried
+
+AOT compilation itself succeeds cleanly and produces a genuine
+runtime-free binary -- confirmed by inspecting the publish output
+directly: a native `Photo2CullNet.App.exe` (~9MB) alongside only *native*
+support DLLs (Photino.Native, WebView2Loader, ONNX Runtime, LibRaw's
+dependencies, libSkiaSharp) and critically **no** `hostfxr.dll`/`coreclr.dll`
+-- there is no .NET runtime in that output at all.
+
+But the published exe doesn't work: it opens its window, starts loading
+the page, then either exits silently (code 1, no exception surfaces
+anywhere -- not even the app's own top-level `UnhandledException` handler)
+or hangs before ever sending Blazor's first render batch, depending on
+one environment variable (`DOTNET_EnableWriteXorExecute=0` changes the
+failure from a crash to a hang, not to success). This happens even after
+applying the exact mitigations from Photino.Blazor's own official
+`Samples/Photino.Blazor.NativeAOT` sample (an `.rd.xml` pair retaining the
+JS-interop reflection metadata AOT's trimming otherwise strips) -- that
+sample targets net8.0, and one of its settings
+(`<PublishTrimmed>false</PublishTrimmed>`) is flatly rejected by the .NET
+10 SDK's ILCompiler ("PublishTrimmed is implied by native compilation and
+cannot be disabled"), and one of its `IlcArg`s (`--nometadatablocking`)
+crashes that same newer ILCompiler outright. Whatever's actually broken
+survives applying the rest of that sample's fixes, so this looks like a
+genuine incompatibility between Photino.Blazor 4.0.13's WebView bridge and
+.NET 10's Native AOT, not a missing trimming directive.
+
+Not pursued further here since self-contained already answers "no install
+step" -- AOT would only additionally shrink the deployment and speed up
+startup, not change whether a user has to install anything.
+If you want to pick this up: start from a Photino.Blazor version bump (a
+newer release may have fixed this) before re-attempting the `.rd.xml`
+route, and verify with an actual launch every time, not just a clean
+`dotnet publish` -- that part was never the problem.
 
 ## License
 

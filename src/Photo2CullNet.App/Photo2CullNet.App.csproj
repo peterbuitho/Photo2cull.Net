@@ -21,4 +21,12 @@
     </Content>
   </ItemGroup>
 
+  <!-- Native AOT (`dotnet publish -p:PublishAot=true`) was investigated
+       and deliberately left disabled here; see README's "Known gaps"
+       for what was actually tried and how it failed. Turning it back on
+       requires the win-only ItemGroup this project used to have (an
+       .rd.xml pair plus RuntimeIdentifier-conditioned RdXmlFile entries)
+       and currently still doesn't render; don't re-enable it without
+       re-verifying against a real launch, not just a clean publish. -->
+
 </Project>
