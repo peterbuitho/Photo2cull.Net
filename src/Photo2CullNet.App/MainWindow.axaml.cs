@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using Photo2CullNet.Core;
 using Photo2CullNet.Core.Imaging;
 
-namespace Photo2CullNet.App.Avalonia;
+namespace Photo2CullNet.App;
 
 /// <summary>
 /// Code-behind (not full MVVM) port of the Blazor App.razor UI onto

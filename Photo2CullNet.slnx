@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Photo2CullNet.App.Avalonia/Photo2CullNet.App.Avalonia.csproj" />
     <Project Path="src/Photo2CullNet.App/Photo2CullNet.App.csproj" />
     <Project Path="src/Photo2CullNet.Core/Photo2CullNet.Core.csproj" />
   </Folder>

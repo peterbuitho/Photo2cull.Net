@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="using:Photo2CullNet.App.Avalonia"
-        x:Class="Photo2CullNet.App.Avalonia.MainWindow"
+        xmlns:local="using:Photo2CullNet.App"
+        x:Class="Photo2CullNet.App.MainWindow"
         Title="Photo2Cull" Width="1300" Height="850"
         Background="#1e1e1e">
 

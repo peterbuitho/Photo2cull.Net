@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace Photo2CullNet.App.Avalonia;
+namespace Photo2CullNet.App;
 
 /// <summary>
 /// One section of the grid: an optional heading ("Group (3)") plus the

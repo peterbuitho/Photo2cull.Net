@@ -4,7 +4,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Photo2CullNet.Core;
 
-namespace Photo2CullNet.App.Avalonia;
+namespace Photo2CullNet.App;
 
 /// <summary>
 /// One photo card in the grid. Wraps a <see cref="PhotoResult"/> plus the

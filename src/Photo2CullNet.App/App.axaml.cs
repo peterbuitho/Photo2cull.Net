@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-namespace Photo2CullNet.App.Avalonia;
+namespace Photo2CullNet.App;
 
 public partial class App : Application
 {

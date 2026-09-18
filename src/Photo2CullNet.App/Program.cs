@@ -1,29 +1,24 @@
-using Microsoft.Extensions.DependencyInjection;
-using Photino.Blazor;
+﻿using Avalonia;
+using System;
 
 namespace Photo2CullNet.App;
 
-internal static class Program
+class Program
 {
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
     [STAThread]
-    private static void Main(string[] args)
-    {
-        var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
-        appBuilder.Services.AddLogging();
-        appBuilder.RootComponents.Add<App>("app");
+    public static void Main(string[] args) => BuildAvaloniaApp()
+        .StartWithClassicDesktopLifetime(args);
 
-        var app = appBuilder.Build();
-
-        app.MainWindow
-            .SetTitle("Photo2Cull")
-            .SetSize(1300, 850)
-            .Center();
-
-        AppDomain.CurrentDomain.UnhandledException += (_, error) =>
-        {
-            app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString() ?? "unknown error");
-        };
-
-        app.Run();
-    }
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+#if DEBUG
+            .WithDeveloperTools()
+#endif
+            .WithInterFont()
+            .LogToTrace();
 }

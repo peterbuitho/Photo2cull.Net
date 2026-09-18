@@ -1,35 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Confirmed working (screenshot-verified) in a minimal spike before
+         this project existed; see the README's "Release/deployment"
+         section. Left on from the start here so every build keeps this
+         path exercised rather than bit-rotting. -->
+    <PublishAot>true</PublishAot>
+    <!-- Native AOT can't fold native (non-.NET) dependencies like libSkiaSharp
+         into the exe, but it can at least drop debug symbols from the publish
+         output: libSkiaSharp.pdb/libHarfBuzzSharp.pdb alone are ~100MB and
+         aren't needed to run. -->
+    <DebugType Condition="'$(Configuration)' != 'Debug'">none</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Photino.Blazor" Version="4.0.13" />
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Photo2CullNet.Core\Photo2CullNet.Core.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="wwwroot\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <!-- Native AOT (`dotnet publish -p:PublishAot=true`) was investigated
-       and deliberately left disabled here; see README's "Known gaps"
-       for what was actually tried and how it failed, including a second
-       attempt retargeting to net9.0 specifically (same result: opens its
-       window, loads the page, never renders). Turning it back on
-       requires the win-only ItemGroup this project used to have (an
-       .rd.xml pair plus RuntimeIdentifier-conditioned RdXmlFile entries)
-       and currently still doesn't render on either net9.0 or net10.0;
-       don't re-enable it without re-verifying against a real launch, not
-       just a clean publish. -->
-
 </Project>
