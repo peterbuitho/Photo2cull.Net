@@ -153,6 +153,26 @@ newer release may have fixed this) before re-attempting the `.rd.xml`
 route, and verify with an actual launch every time, not just a clean
 `dotnet publish` -- that part was never the problem.
 
+### Native AOT under Avalonia: works, one environment gotcha
+
+`Photo2CullNet.App.Avalonia` ships with `PublishAot` left on and
+`dotnet publish -c Release -r win-x64 --self-contained true` produces a
+genuine native `Photo2CullNet.App.Avalonia.exe` (~22MB, no
+`hostfxr.dll`/`coreclr.dll` in the output) that launches and renders
+correctly -- re-verified from a clean publish, not just re-stating the
+earlier spike.
+
+On a machine where the linker step fails with `'vswhere.exe' is not
+recognized as an internal or external command` (and a garbled
+downstream `MSB3073` about `link.exe`), the cause is that
+`C:\Program Files (x86)\Microsoft Visual Studio\Installer` (where
+`vswhere.exe` actually lives) isn't on `PATH` -- the ILCompiler NuGet
+targets shell out to it by bare name to locate the VC toolset, and
+silently fold its failure output into the linker command it builds.
+Add that directory to `PATH` for the build session and retry; no VS
+Developer Command Prompt or other environment setup is needed beyond
+that one directory.
+
 ## License
 
 The bundled face-detection model (`src/Photo2CullNet.Core/Assets/Models/version-RFB-320.onnx`)

@@ -6,10 +6,34 @@
         Background="#1e1e1e">
 
   <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="Background" Value="#3a3a3a" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="#4a4a4a" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#4a4a4a" />
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a2a2a" />
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2a2a2a" />
+    </Style>
+    <Style Selector="Button:disabled">
+      <Setter Property="Foreground" Value="#777777" />
+    </Style>
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="#0e5f9e" />
       <Setter Property="Foreground" Value="White" />
       <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="ToggleButton">
+      <Setter Property="Background" Value="#3a3a3a" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="#4a4a4a" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="ToggleButton.tab:checked">
       <Setter Property="Background" Value="#0e5f9e" />
@@ -102,15 +126,15 @@
           </StackPanel>
           <StackPanel Margin="0,0,16,0" Spacing="2">
             <TextBlock Text="Disqualify scores below" Foreground="#aaa" FontSize="11" />
-            <NumericUpDown Name="ThresholdNumeric" Minimum="0" Value="32" Increment="1" Width="110" ValueChanged="OnThresholdChanged" ShowButtonSpinner="False" />
+            <NumericUpDown Name="ThresholdNumeric" Minimum="0" Value="32" Increment="1" Width="110" ValueChanged="OnThresholdChanged" ShowButtonSpinner="True" />
           </StackPanel>
           <StackPanel Margin="0,0,16,0" Spacing="2">
             <TextBlock Text="Duplicate/burst threshold (0-64)" Foreground="#aaa" FontSize="11" />
-            <NumericUpDown Name="GroupThresholdNumeric" Minimum="0" Maximum="64" Value="6" Increment="1" Width="110" ValueChanged="OnGroupThresholdChanged" ShowButtonSpinner="False" />
+            <NumericUpDown Name="GroupThresholdNumeric" Minimum="0" Maximum="64" Value="6" Increment="1" Width="110" ValueChanged="OnGroupThresholdChanged" ShowButtonSpinner="True" />
           </StackPanel>
           <StackPanel Spacing="2">
             <TextBlock Text="Shortlist size" Foreground="#aaa" FontSize="11" />
-            <NumericUpDown Name="ShortlistNumeric" Minimum="1" Maximum="100000" Value="150" Increment="1" Width="110" ValueChanged="OnShortlistSizeChanged" ShowButtonSpinner="False" />
+            <NumericUpDown Name="ShortlistNumeric" Minimum="1" Maximum="100000" Value="150" Increment="1" Width="110" ValueChanged="OnShortlistSizeChanged" ShowButtonSpinner="True" />
           </StackPanel>
         </WrapPanel>
       </Border>

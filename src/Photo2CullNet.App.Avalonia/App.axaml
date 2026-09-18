@@ -1,8 +1,10 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Photo2CullNet.App.Avalonia.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
+             <!-- Forced Dark: the UI is hand-styled for a dark background (MainWindow), so it must not
+                  follow the OS theme variant — "Default" let FluentTheme resolve button colors against
+                  Light/mismatched palettes, producing unreadable dark-grey-on-black buttons. -->
 
     <Application.Styles>
         <FluentTheme />
