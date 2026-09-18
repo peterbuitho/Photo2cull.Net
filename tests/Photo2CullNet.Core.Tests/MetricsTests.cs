@@ -22,4 +22,23 @@ public class MetricsTests
 
         Assert.Equal(0.0, Ranking.OverallScore(metrics, weights));
     }
+
+    /// <summary>
+    /// Regression guard: for a struct, `new Weights()` invokes the
+    /// implicit parameterless constructor (all fields zeroed), NOT the
+    /// primary constructor's declared defaults, even though it looks like
+    /// it should. `Weights.Default` must spell its values out explicitly.
+    /// </summary>
+    [Fact]
+    public void Default_IsNotAllZero()
+    {
+        var w = Weights.Default;
+
+        Assert.Equal(0.25f, w.Sharpness);
+        Assert.Equal(0.15f, w.Exposure);
+        Assert.Equal(0.10f, w.Contrast);
+        Assert.Equal(0.10f, w.Color);
+        Assert.Equal(0.25f, w.Composition);
+        Assert.Equal(0.15f, w.Subject);
+    }
 }

@@ -209,7 +209,15 @@ public readonly record struct Weights(
     float Composition = 0.25f,
     float Subject = 0.15f)
 {
-    public static readonly Weights Default = new();
+    // NOT `new()`: for a struct (record struct included), a zero-argument
+    // call always resolves to the implicit parameterless
+    // constructor -- which zero-initializes every field -- regardless of
+    // the default parameter values declared on the primary constructor
+    // above. Those defaults only apply when the constructor is invoked
+    // with its parameter list (even if every argument is itself a
+    // default), so they must be spelled out explicitly here.
+    public static readonly Weights Default = new(
+        Sharpness: 0.25f, Exposure: 0.15f, Contrast: 0.10f, Color: 0.10f, Composition: 0.25f, Subject: 0.15f);
 }
 
 public static class Ranking

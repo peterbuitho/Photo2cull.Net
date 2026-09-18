@@ -45,8 +45,25 @@ button, select {
 button:hover:not(:disabled) { background: #484848; }
 button:disabled { opacity: 0.5; cursor: default; }
 
-.tabs { display: flex; gap: 4px; padding: 8px 14px 0; }
+button.primary {
+    background: #0e5f9e;
+    border-color: #1478c4;
+    color: white;
+    font-weight: 600;
+}
+button.primary:hover:not(:disabled) { background: #1478c4; }
+
+.tabs { display: flex; gap: 4px; align-items: center; padding: 8px 14px 0; }
 .tabs button.active { background: #0e5f9e; border-color: #0e5f9e; color: white; }
+
+.sort-by {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #aaa;
+}
 
 .status-line { padding: 4px 14px; color: #999; font-size: 12px; }
 
@@ -138,3 +155,46 @@ button:disabled { opacity: 0.5; cursor: default; }
 .overall { color: #9cc9ff; }
 
 .info select { width: 100%; padding: 2px 4px; font-size: 11px; }
+
+.thumb-box img { cursor: zoom-in; }
+
+.viewer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    outline: none;
+}
+
+.viewer-content {
+    display: flex;
+    flex-direction: column;
+    max-width: 92vw;
+    max-height: 92vh;
+    gap: 8px;
+}
+
+.viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #ddd;
+    gap: 12px;
+}
+
+.viewer-image {
+    max-width: 92vw;
+    max-height: 84vh;
+    object-fit: contain;
+    border-radius: 4px;
+    background: #111;
+}
+
+.viewer-loading {
+    color: #ccc;
+    padding: 40px;
+    text-align: center;
+}

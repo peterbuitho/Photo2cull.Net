@@ -1,4 +1,5 @@
 @using System.Diagnostics
+@using System.Globalization
 @using System.Threading.Channels
 @implements IDisposable
 
@@ -11,7 +12,7 @@
         <option value="Portrait">Portrait</option>
         <option value="Object">Object</option>
     </select>
-    <button @onclick="StartScan" disabled="@(_scanning || string.IsNullOrWhiteSpace(_rootPath))">Scan</button>
+    <button class="primary" @onclick="StartScan" disabled="@(_scanning || string.IsNullOrWhiteSpace(_rootPath))">Scan</button>
     <button @onclick="GroupDuplicates" disabled="@(_scanning || _results.Count == 0)">Group duplicates</button>
     <button @onclick="RunPipeline" disabled="@(_scanning || _results.Count == 0)">Rank now</button>
     <button @onclick="MoveDisqualified" disabled="@(_scanning || _results.Count == 0)">Move disqualified</button>
@@ -36,25 +37,51 @@
     <button class="@(_viewMode == ViewMode.Flat ? "active" : "")" @onclick="() => _viewMode = ViewMode.Flat">All photos</button>
     <button class="@(_viewMode == ViewMode.Grouped ? "active" : "")" @onclick="() => _viewMode = ViewMode.Grouped">Duplicate groups (@_duplicateGroups.Count)</button>
     <button class="@(_viewMode == ViewMode.Pipeline ? "active" : "")" @onclick="() => _viewMode = ViewMode.Pipeline">Shortlist@(_pipelineResult is { } pr ? $" ({pr.Shortlist.Count})" : "")</button>
+    <label class="sort-by">Sort by
+        <select value="@_sortBy" @onchange="OnSortByChanged">
+            <option value="Sharpness">Sharpness</option>
+            <option value="Overall">Overall</option>
+        </select>
+    </label>
 </div>
 
 <div class="weights-pane">
-    <label>Sharpness <input type="range" min="0" max="1" step="0.05" value="@_weights.Sharpness" @oninput="e => UpdateWeight(w => w with { Sharpness = ParseFloat(e) })" /></label>
-    <label>Exposure <input type="range" min="0" max="1" step="0.05" value="@_weights.Exposure" @oninput="e => UpdateWeight(w => w with { Exposure = ParseFloat(e) })" /></label>
-    <label>Contrast <input type="range" min="0" max="1" step="0.05" value="@_weights.Contrast" @oninput="e => UpdateWeight(w => w with { Contrast = ParseFloat(e) })" /></label>
-    <label>Color <input type="range" min="0" max="1" step="0.05" value="@_weights.Color" @oninput="e => UpdateWeight(w => w with { Color = ParseFloat(e) })" /></label>
-    <label>Composition <input type="range" min="0" max="1" step="0.05" value="@_weights.Composition" @oninput="e => UpdateWeight(w => w with { Composition = ParseFloat(e) })" /></label>
-    <label>Subject <input type="range" min="0" max="1" step="0.05" value="@_weights.Subject" @oninput="e => UpdateWeight(w => w with { Subject = ParseFloat(e) })" /></label>
+    <label>Sharpness <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Sharpness)" @oninput="e => UpdateWeight(w => w with { Sharpness = ParseFloat(e) })" /></label>
+    <label>Exposure <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Exposure)" @oninput="e => UpdateWeight(w => w with { Exposure = ParseFloat(e) })" /></label>
+    <label>Contrast <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Contrast)" @oninput="e => UpdateWeight(w => w with { Contrast = ParseFloat(e) })" /></label>
+    <label>Color <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Color)" @oninput="e => UpdateWeight(w => w with { Color = ParseFloat(e) })" /></label>
+    <label>Composition <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Composition)" @oninput="e => UpdateWeight(w => w with { Composition = ParseFloat(e) })" /></label>
+    <label>Subject <input type="range" min="0" max="1" step="0.05" value="@F(_weights.Subject)" @oninput="e => UpdateWeight(w => w with { Subject = ParseFloat(e) })" /></label>
     <label>Disqualify scores below
-        <input type="number" min="0" step="1" value="@_technicalThreshold" @oninput="e => _technicalThreshold = double.TryParse(e.Value?.ToString(), out var v) ? Math.Max(v, 0) : _technicalThreshold" />
+        <input type="number" min="0" step="1" value="@F(_technicalThreshold)" @oninput="e => _technicalThreshold = ParseDouble(e, _technicalThreshold, min: 0)" />
     </label>
     <label>Duplicate/burst threshold (0-64, lower = stricter)
-        <input type="number" min="0" max="64" step="1" value="@_groupThreshold" @oninput="e => _groupThreshold = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 0, 64) : _groupThreshold" />
+        <input type="number" min="0" max="64" step="1" value="@_groupThreshold" @oninput="e => _groupThreshold = ParseInt(e, _groupThreshold, 0, 64)" />
     </label>
     <label>Shortlist size
-        <input type="number" min="1" max="100000" step="1" value="@_shortlistSize" @oninput="e => _shortlistSize = int.TryParse(e.Value?.ToString(), out var v) ? Math.Clamp(v, 1, 100_000) : _shortlistSize" />
+        <input type="number" min="1" max="100000" step="1" value="@_shortlistSize" @oninput="e => _shortlistSize = ParseInt(e, _shortlistSize, 1, 100_000)" />
     </label>
 </div>
+
+@if (_viewerPath is { } viewerPath)
+{
+    <div class="viewer-overlay" @onclick="CloseViewer" @onkeydown="OnViewerKeyDown" tabindex="0" @ref="_viewerOverlayRef">
+        <div class="viewer-content" @onclick:stopPropagation="true">
+            <div class="viewer-header">
+                <span>@Path.GetFileName(viewerPath)</span>
+                <button @onclick="CloseViewer">Close (Esc)</button>
+            </div>
+            @if (_viewerDataUri is { } uri)
+            {
+                <img class="viewer-image" src="@uri" alt="" />
+            }
+            else
+            {
+                <div class="viewer-loading">Loading full size…</div>
+            }
+        </div>
+    </div>
+}
 
 @if (_viewMode == ViewMode.Pipeline && _pipelineResult is { } pipeline)
 {
@@ -75,7 +102,7 @@
             var result = _results[index];
             <div class="card" @key="result.Path">
                 <div class="thumb-box">
-                    <img src="@ThumbDataUri(result)" alt="" />
+                    <img src="@ThumbDataUri(result)" alt="" title="Double-click for full size" @ondblclick="() => OpenPreview(result.Path)" />
                 </div>
                 <div class="info">
                     <div class="filename">@Path.GetFileName(result.Path)</div>
@@ -96,6 +123,13 @@
 @code {
     private enum ViewMode { Flat, Grouped, Pipeline }
 
+    /// <summary>
+    /// Which score the Flat grid is sorted by. Mirrors app.rs's `SortBy`:
+    /// this only changes display order -- the disqualify/pipeline/dedupe
+    /// logic always operates on raw sharpness regardless of this setting.
+    /// </summary>
+    private enum SortBy { Sharpness, Overall }
+
     private sealed record Section(string? Heading, List<int> Indices);
 
     private sealed record PipelineResultView(int Total, int AfterTechnical, int AfterDedupe, List<int> Shortlist);
@@ -111,6 +145,7 @@
     private CancellationTokenSource? _scanCts;
 
     private ViewMode _viewMode = ViewMode.Flat;
+    private SortBy _sortBy = SortBy.Sharpness;
     private List<List<string>> _duplicateGroups = [];
 
     /// <summary>Max dHash Hamming distance (0-64) for two photos to be considered duplicates/burst-mates.</summary>
@@ -139,14 +174,39 @@
     private void UpdateWeight(Func<Weights, Weights> update)
     {
         _weights = update(_weights);
+        _flatOrderDirty = true; // Overall-sorted order depends on the weights too.
         if (_viewMode == ViewMode.Pipeline)
         {
             RunPipeline();
         }
     }
 
-    private static float ParseFloat(Microsoft.AspNetCore.Components.ChangeEventArgs e) =>
-        float.TryParse(e.Value?.ToString(), out var v) ? v : 0f;
+    private void OnSortByChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SortBy>(e.Value?.ToString(), out var sortBy))
+        {
+            _sortBy = sortBy;
+            _flatOrderDirty = true;
+        }
+    }
+
+    // HTML5 number/range inputs are always period-decimal regardless of OS
+    // locale, but plain string interpolation of a float/double formats
+    // with the *current* culture -- under a comma-decimal culture that
+    // produces e.g. "0,25", which the input rejects as invalid and shows
+    // as 0. Format and parse with InvariantCulture explicitly everywhere
+    // a number crosses this boundary.
+    private static string F(double v) => v.ToString(CultureInfo.InvariantCulture);
+    private static string F(float v) => v.ToString(CultureInfo.InvariantCulture);
+
+    private static float ParseFloat(ChangeEventArgs e) =>
+        float.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f;
+
+    private static double ParseDouble(ChangeEventArgs e, double fallback, double min) =>
+        double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? Math.Max(v, min) : fallback;
+
+    private static int ParseInt(ChangeEventArgs e, int fallback, int min, int max) =>
+        int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? Math.Clamp(v, min, max) : fallback;
 
     private async Task BrowseFolder()
     {
@@ -339,7 +399,9 @@
     {
         if (_flatOrderDirty || _flatOrderCache is null)
         {
-            _flatOrderCache = Enumerable.Range(0, _results.Count).OrderByDescending(i => _results[i].Score).ToList();
+            _flatOrderCache = _sortBy == SortBy.Overall
+                ? Enumerable.Range(0, _results.Count).OrderByDescending(i => Ranking.OverallScore(_results[i].Metrics, _weights)).ToList()
+                : Enumerable.Range(0, _results.Count).OrderByDescending(i => _results[i].Score).ToList();
             _flatOrderDirty = false;
         }
         return _flatOrderCache;
@@ -380,5 +442,104 @@
         return uri;
     }
 
-    public void Dispose() => _scanCts?.Cancel();
+    /// <summary>
+    /// The image cap for the double-click "full size" preview -- not the
+    /// true original resolution (which could be 40-100MP and slow/wasteful
+    /// to decode just to fit it on screen), big enough to judge focus at
+    /// full-window size. Matches app.rs's PREVIEW_MAX_DIM.
+    /// </summary>
+    private const int PreviewMaxDim = 2400;
+
+    private string? _viewerPath;
+    private string? _viewerDataUri;
+    private bool _viewerNeedsFocus;
+    private ElementReference _viewerOverlayRef;
+    private CancellationTokenSource? _viewerCts;
+
+    private async Task OpenPreview(string path)
+    {
+        _viewerCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _viewerCts = cts;
+
+        _viewerPath = path;
+        _viewerDataUri = null;
+        _viewerNeedsFocus = true;
+
+        string? dataUri;
+        try
+        {
+            dataUri = await Task.Run(() =>
+            {
+                try
+                {
+                    var img = Photo.DecodePhoto(path, PreviewMaxDim);
+                    var png = SkiaImageCodec.EncodePng(img);
+                    return $"data:image/png;base64,{Convert.ToBase64String(png)}";
+                }
+                catch
+                {
+                    return null;
+                }
+            }, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (cts.IsCancellationRequested || _viewerPath != path)
+        {
+            return; // superseded by a newer preview or closed while decoding
+        }
+
+        if (dataUri is null)
+        {
+            // Matches app.rs's PreviewEvent::Failed handling: a failed
+            // decode just closes the viewer rather than showing an error.
+            _viewerPath = null;
+        }
+        else
+        {
+            _viewerDataUri = dataUri;
+        }
+        StateHasChanged();
+    }
+
+    private void CloseViewer()
+    {
+        _viewerCts?.Cancel();
+        _viewerPath = null;
+        _viewerDataUri = null;
+    }
+
+    private void OnViewerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseViewer();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_viewerNeedsFocus && _viewerPath is not null)
+        {
+            _viewerNeedsFocus = false;
+            try
+            {
+                await _viewerOverlayRef.FocusAsync();
+            }
+            catch
+            {
+                // Best-effort -- the close button and click-outside still work without focus.
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _scanCts?.Cancel();
+        _viewerCts?.Cancel();
+    }
 }
