@@ -1,3 +1,4 @@
+@using System.Diagnostics
 @using System.Threading.Channels
 @implements IDisposable
 
@@ -71,7 +72,23 @@
         }
         @foreach (var index in section.Indices)
         {
-            @RenderCard(_results[index])
+            var result = _results[index];
+            <div class="card" @key="result.Path">
+                <div class="thumb-box">
+                    <img src="@ThumbDataUri(result)" alt="" />
+                </div>
+                <div class="info">
+                    <div class="filename">@Path.GetFileName(result.Path)</div>
+                    <select value="@result.Mode" @onchange="e => OnModeChanged(_indexByPath[result.Path], e)">
+                        @foreach (var m in PhotoModeExtensions.All)
+                        {
+                            <option value="@m">@m.Label()</option>
+                        }
+                    </select>
+                    <span class="badge @SharpnessBadgeClass(result.Score)">@result.Score.ToString("0.0")</span>
+                    <span class="overall">Overall: @Ranking.OverallScore(result.Metrics, _weights).ToString("0.0")</span>
+                </div>
+            </div>
         }
     }
 </div>
@@ -160,21 +177,34 @@
         _foundCount = 0;
         _processedCount = 0;
         _scanning = true;
+        _flatOrderDirty = true;
 
         var channel = Channel.CreateUnbounded<ScanEvent>();
         _ = Task.Run(() => Scan.RunScanAsync(_rootPath, CurrentScanMode(), channel.Writer, _scanCts.Token));
 
+        // Re-rendering the whole grid is O(n) in how many photos have
+        // landed so far -- doing that after every single photo (rather
+        // than batching arrivals between renders) turns an n-photo scan
+        // into an O(n^2) render loop, which for 1000+ photos looks
+        // indistinguishable from a hang even though the background scan
+        // itself is still running fine. Render at most a few times a
+        // second instead.
+        var renderThrottle = Stopwatch.StartNew();
         await foreach (var evt in channel.Reader.ReadAllAsync(_scanCts.Token))
         {
+            bool renderNow = false;
             switch (evt)
             {
                 case ScanEvent.Found found:
                     _foundCount = found.Count;
+                    renderNow = true;
                     break;
                 case ScanEvent.Photo photo:
                     _indexByPath[photo.Result.Path] = _results.Count;
                     _results.Add(photo.Result);
                     _processedCount++;
+                    _flatOrderDirty = true;
+                    renderNow = renderThrottle.ElapsedMilliseconds > 150;
                     break;
                 case ScanEvent.Failed failed:
                     _failures.Add((failed.Path, failed.Error));
@@ -182,10 +212,18 @@
                     break;
                 case ScanEvent.Done:
                     _scanning = false;
+                    renderNow = true;
                     break;
             }
-            StateHasChanged();
+            if (renderNow)
+            {
+                StateHasChanged();
+                renderThrottle.Restart();
+            }
         }
+
+        // Catch anything added since the last throttled render.
+        StateHasChanged();
     }
 
     private void GroupDuplicates()
@@ -248,6 +286,7 @@
                 {
                     _results.RemoveAt(idx);
                     RebuildIndex();
+                    _flatOrderDirty = true;
                 }
             }
             catch (Exception e)
@@ -281,10 +320,29 @@
                 }
                 break;
             default:
-                yield return new Section(null, Enumerable.Range(0, _results.Count)
-                    .OrderByDescending(i => _results[i].Score).ToList());
+                yield return new Section(null, FlatOrder());
                 break;
         }
+    }
+
+    private List<int>? _flatOrderCache;
+    private bool _flatOrderDirty = true;
+
+    /// <summary>
+    /// The Flat view's photo order (by raw sharpness, best first), cached
+    /// and only recomputed when the underlying data actually changes --
+    /// re-sorting all N results on every single render (Blazor calls the
+    /// markup's @foreach source on every re-render) turned a 1000+ photo
+    /// scan into an O(n^2 log n) render loop that looked like a hang.
+    /// </summary>
+    private List<int> FlatOrder()
+    {
+        if (_flatOrderDirty || _flatOrderCache is null)
+        {
+            _flatOrderCache = Enumerable.Range(0, _results.Count).OrderByDescending(i => _results[i].Score).ToList();
+            _flatOrderDirty = false;
+        }
+        return _flatOrderCache;
     }
 
     private async Task OnModeChanged(int index, ChangeEventArgs e)
@@ -302,27 +360,11 @@
             {
                 var current = _results[idx];
                 _results[idx] = current with { Mode = mode, Score = r.Value.Score, Metrics = r.Value.Metrics };
+                _flatOrderDirty = true;
                 StateHasChanged();
             }
         }
     }
-
-    private RenderFragment RenderCard(PhotoResult result) => @<div class="card">
-        <div class="thumb-box">
-            <img src="@ThumbDataUri(result)" alt="" />
-        </div>
-        <div class="info">
-            <div class="filename">@Path.GetFileName(result.Path)</div>
-            <select value="@result.Mode" @onchange="e => OnModeChanged(_indexByPath[result.Path], e)">
-                @foreach (var m in PhotoModeExtensions.All)
-                {
-                    <option value="@m">@m.Label()</option>
-                }
-            </select>
-            <span class="badge @SharpnessBadgeClass(result.Score)">@result.Score.ToString("0.0")</span>
-            <span class="overall">Overall: @Ranking.OverallScore(result.Metrics, _weights).ToString("0.0")</span>
-        </div>
-    </div>;
 
     private static string SharpnessBadgeClass(double raw) =>
         raw <= SharpnessBlurryMax ? "badge-blurry" : raw <= SharpnessSoftMax ? "badge-soft" : "badge-sharp";

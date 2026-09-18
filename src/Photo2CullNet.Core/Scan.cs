@@ -147,6 +147,10 @@ public static class Scan
             }
         });
 
+        // Not passed `ct`: callers rely on this to flip their "scanning"
+        // flag back off even when the scan was cancelled mid-flight, so it
+        // must go through regardless of the token's state by this point.
+        await writer.WriteAsync(new ScanEvent.Done());
         writer.TryComplete();
     }
 
@@ -176,6 +180,7 @@ public static class Scan
             }
         });
 
+        await writer.WriteAsync(new RecomputeEvent.Done());
         writer.TryComplete();
     }
 

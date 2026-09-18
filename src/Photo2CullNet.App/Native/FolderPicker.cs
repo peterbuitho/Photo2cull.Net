@@ -40,8 +40,13 @@ public static class FolderPicker
             {
                 result = ShowShellFolderBrowser(title);
             }
-            catch
+            catch (Exception e)
             {
+                // Swallowed on purpose (falls back to the manual text
+                // field), but logged rather than silent -- a marshaling
+                // mistake here should be discoverable, not just "the
+                // button does nothing".
+                Console.Error.WriteLine($"[FolderPicker] Windows folder dialog failed: {e}");
                 result = null;
             }
         });
@@ -54,50 +59,72 @@ public static class FolderPicker
     [SupportedOSPlatform("windows")]
     private static string? ShowShellFolderBrowser(string title)
     {
-        var displayName = new StringBuilder(260);
-        var bi = new BROWSEINFO
-        {
-            hwndOwner = IntPtr.Zero,
-            pidlRoot = IntPtr.Zero,
-            pszDisplayName = displayName,
-            lpszTitle = title,
-            ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE,
-            lpfn = null,
-            lParam = IntPtr.Zero,
-            iImage = 0,
-        };
+        // COINIT_APARTMENTTHREADED; S_FALSE (already initialized) is fine too.
+        int hr = CoInitializeEx(IntPtr.Zero, 0x2);
+        bool needsUninit = hr == 0; // S_OK -- we own this init, so we must uninit it.
 
-        IntPtr pidl = SHBrowseForFolder(ref bi);
-        if (pidl == IntPtr.Zero) return null;
-
+        // pszDisplayName is an OUTPUT buffer the shell writes into. A
+        // StringBuilder *field* inside a marshaled struct doesn't reliably
+        // get the shell's write-back -- struct-field marshaling isn't the
+        // same as a StringBuilder passed directly as a method parameter
+        // (which does work correctly, see SHGetPathFromIDList below).
+        // Allocate the buffer ourselves instead.
+        IntPtr displayNameBuffer = Marshal.AllocHGlobal(520); // MAX_PATH (260) wide chars
         try
         {
-            var path = new StringBuilder(260);
-            return SHGetPathFromIDList(pidl, path) ? path.ToString() : null;
+            var bi = new BROWSEINFO
+            {
+                hwndOwner = IntPtr.Zero,
+                pidlRoot = IntPtr.Zero,
+                pszDisplayName = displayNameBuffer,
+                lpszTitle = title,
+                ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE,
+                lpfn = IntPtr.Zero,
+                lParam = IntPtr.Zero,
+                iImage = 0,
+            };
+
+            IntPtr pidl = SHBrowseForFolder(ref bi);
+            if (pidl == IntPtr.Zero) return null; // user cancelled
+
+            try
+            {
+                var path = new StringBuilder(260);
+                return SHGetPathFromIDList(pidl, path) ? path.ToString() : null;
+            }
+            finally
+            {
+                Marshal.FreeCoTaskMem(pidl);
+            }
         }
         finally
         {
-            Marshal.FreeCoTaskMem(pidl);
+            Marshal.FreeHGlobal(displayNameBuffer);
+            if (needsUninit) CoUninitialize();
         }
     }
 
     private const uint BIF_RETURNONLYFSDIRS = 0x0001;
     private const uint BIF_NEWDIALOGSTYLE = 0x0040;
 
-    private delegate int BrowseCallbackProc(IntPtr hwnd, uint msg, IntPtr lParam, IntPtr lpData);
-
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct BROWSEINFO
     {
         public IntPtr hwndOwner;
         public IntPtr pidlRoot;
-        public StringBuilder pszDisplayName;
+        public IntPtr pszDisplayName;
         public string lpszTitle;
         public uint ulFlags;
-        public BrowseCallbackProc? lpfn;
+        public IntPtr lpfn;
         public IntPtr lParam;
         public int iImage;
     }
+
+    [DllImport("ole32.dll")]
+    private static extern int CoInitializeEx(IntPtr reserved, uint coinit);
+
+    [DllImport("ole32.dll")]
+    private static extern void CoUninitialize();
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr SHBrowseForFolder(ref BROWSEINFO lpbi);
